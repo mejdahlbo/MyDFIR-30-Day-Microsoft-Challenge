@@ -14,7 +14,7 @@ Investigating **18,163 failed Windows logons** (Event ID 4625) in Microsoft Sent
 
 1. **About 87% targeted admin-style accounts** (`ADMINISTRATOR` alone: 10,255), plus generic names like USER, TEST and SERVER. This pattern is consistent with an **automated brute-force attempt** using a list of common usernames.
 2. **KQL groups text case-sensitively**, so `ADMINISTRATOR` and `administrator` show up as separate accounts.
-3. **All attempts landed in one single hour**, but that is when the training data was *loaded*, not when the logons happened. Check what a timestamp really means before building a timeline.
+3. **All attempts landed in one single hour**, but that is when I ingested the training data from a file, not when the logons happened. Exercise 8 proves it: check which clock a timestamp comes from before building a timeline.
 
 ---
 
@@ -66,6 +66,8 @@ SecurityEvent
 ```
 
 > Hotel: **`project` photocopies only the columns I need**, and **`sort by … asc`** replays the night from oldest to newest.
+
+Note: the query runs, but `TimeCollected` turned out to hold no values in my dataset (see Exercise 8), so this sort does not really put anything in order. Lesson: check what a column actually contains, not just whether it exists.
 
 > **Why my table names differ from the course video:** Microsoft updated the Sentinel Training Lab in May 2026. The video uses `SecurityEvent_CL` / `EventID_s`; my workspace uses `SecurityEvent` / `EventID`. Lesson: always check the column names in your own workspace.
 
@@ -125,15 +127,41 @@ SecurityEvent
 
 ![Failed logons per hour](05-time-bin.png)
 
-Only **one row**: every event shares the same timestamp (also visible in Exercise 2), because the training data was loaded in one go.
+Only **one row**: every event shares the same timestamp (also visible in Exercise 2), because I ingested the training data from a file, in one go. Exercise 8 proves it.
 
 > Hotel: an old logbook was photocopied into a new one at midnight, so every entry carries the photocopy date, not the night the doors were really tried.
+
+## Exercise 8 – Which clock can I trust?
+
+```kql
+SecurityEvent
+| where EventID == 4625
+| summarize Events = count(),
+    FirstGenerated = min(TimeGenerated),
+    LastGenerated  = max(TimeGenerated),
+    FirstCollected = min(TimeCollected),
+    LastCollected  = max(TimeCollected),
+    FirstIngested  = min(ingestion_time()),
+    LastIngested   = max(ingestion_time())
+```
+
+> Hotel: **checking the photocopier's own log.** Instead of trusting the time written on each line, I compare three clocks: when the line was written, when the guard collected it, and when it reached the records room.
+
+![Comparing time fields](06-which-clock.png)
+
+| Clock | First | Last | Spread |
+|---|---|---|---|
+| `TimeGenerated` | 12:12:49.838 | 12:13:03.738 | about 14 seconds |
+| Ingestion time | 12:13:02.083 | 12:15:23.629 | about 2½ minutes |
+| `TimeCollected` | no values | no values | empty |
+
+> **Observation:** all 18,163 failed logons were "generated" within **14 seconds** and reached the workspace within the next **2½ minutes**. This matches what I did: I ingested the training data from a file. `TimeGenerated` records the upload and `TimeCollected` is empty, so this dataset has **no trustworthy original event time**. I can still answer **who** was targeted and **how often**, but not **when** or **in what order**. Naming the limits of the evidence is part of the analysis.
 
 ---
 
 ## Skills practised
 
-`where` (filter) · `take` (sample) · `project` (pick columns) · `summarize count()` (tally) · `sort by` (order) · `bin()` (group by time). Plus two analyst habits: verify field names in your own environment, and treat a big number as a **lead, not proof**.
+`where` (filter) · `take` (sample) · `project` (pick columns) · `summarize count()` (tally) · `sort by` (order) · `bin()` (group by time) · `ingestion_time()` (when data arrived). Plus two analyst habits: verify field names in your own environment, and treat a big number as a **lead, not proof**.
 
 ## Next step
 
