@@ -2,25 +2,23 @@
 
 **MyDFIR 30-Day Microsoft Challenge** · Hands-on learning journal · Bo Mejdahl
 
-![Microsoft Sentinel](https://img.shields.io/badge/Microsoft_Sentinel-0078D4?style=flat&logo=microsoftazure&logoColor=white)
-![KQL](https://img.shields.io/badge/KQL-Kusto_Query_Language-blue?style=flat)
-![Windows Security Events](https://img.shields.io/badge/Windows-Security_Events-0078D6?style=flat&logo=windows&logoColor=white)
+Tools: Microsoft Sentinel · KQL · Windows Security Events
 
-📄 **[Download the full PDF journal](Day04_Sentinel_KQL_Hotel_Analogy.pdf)**
+→ **[Download the full PDF journal](Day04_Sentinel_KQL_Hotel_Analogy.pdf)**
 
 ---
 
-## ⭐ Key findings
+## Key findings
 
 Investigating **18,163 failed Windows logons** (Event ID 4625) in Microsoft Sentinel:
 
-1. 🔑 **About 87% targeted admin-style accounts** (`ADMINISTRATOR` alone: 10,255), plus generic names like USER, TEST and SERVER. This pattern is consistent with an **automated brute-force attempt** using a list of common usernames.
-2. 🔡 **KQL groups text case-sensitively**, so `ADMINISTRATOR` and `administrator` show up as separate accounts.
-3. ⏱️ **All attempts landed in one single hour**, but that is when the training data was *loaded*, not when the logons happened. Check what a timestamp really means before building a timeline.
+1. **About 87% targeted admin-style accounts** (`ADMINISTRATOR` alone: 10,255), plus generic names like USER, TEST and SERVER. This pattern is consistent with an **automated brute-force attempt** using a list of common usernames.
+2. **KQL groups text case-sensitively**, so `ADMINISTRATOR` and `administrator` show up as separate accounts.
+3. **All attempts landed in one single hour**, but that is when the training data was *loaded*, not when the logons happened. Check what a timestamp really means before building a timeline.
 
 ---
 
-## 🏨 The analogy I use
+## The analogy I use
 
 I learn best with pictures in my head, so I treat Sentinel like a **hotel**:
 
@@ -41,7 +39,7 @@ SecurityEvent
 | where EventID == 4625
 ```
 
-🏨 **`where` is the receptionist's highlighter:** "only show me the lines where someone used a wrong key card." A failed logon can be innocent (a typo) or suspicious (password guessing). This query is the starting point, not the verdict.
+> Hotel: **`where` is the receptionist's highlighter:** "only show me the lines where someone used a wrong key card." A failed logon can be innocent (a typo) or suspicious (password guessing). This query is the starting point, not the verdict.
 
 ![Filtering for Event ID 4625](01-where-4625.png)
 
@@ -52,11 +50,11 @@ SecurityEvent
 | take 10
 ```
 
-🏨 **`take` is flipping the logbook open and reading any 10 lines**, a quick way to see which columns exist. ⚠️ It returns *any* 10 rows, not the newest.
+> Hotel: **`take` is flipping the logbook open and reading any 10 lines**, a quick way to see which columns exist. Note: it returns *any* 10 rows, not the newest.
 
 ![Sample of 10 events](02-take-10.png)
 
-> 🔎 Even this small sample shows names like `admin`, `administrator` and `AZUREUSER`: someone trying the doors marked "Manager" and "Staff" rather than guest rooms.
+> **Observation:** Even this small sample shows names like `admin`, `administrator` and `AZUREUSER`: someone trying the doors marked "Manager" and "Staff" rather than guest rooms.
 
 ## Exercise 3 – Pick columns and order them
 
@@ -67,9 +65,9 @@ SecurityEvent
 | sort by TimeCollected asc
 ```
 
-🏨 **`project` photocopies only the columns I need**, and **`sort by … asc`** replays the night from oldest to newest.
+> Hotel: **`project` photocopies only the columns I need**, and **`sort by … asc`** replays the night from oldest to newest.
 
-> 📘 **Why my table names differ from the course video:** Microsoft updated the Sentinel Training Lab in May 2026. The video uses `SecurityEvent_CL` / `EventID_s`; my workspace uses `SecurityEvent` / `EventID`. Lesson: always check the column names in your own workspace.
+> **Why my table names differ from the course video:** Microsoft updated the Sentinel Training Lab in May 2026. The video uses `SecurityEvent_CL` / `EventID_s`; my workspace uses `SecurityEvent` / `EventID`. Lesson: always check the column names in your own workspace.
 
 ## Exercise 4–5 – Count and rank events by type
 
@@ -79,7 +77,7 @@ SecurityEvent
 | sort by EventCount desc
 ```
 
-🏨 **`summarize count() by EventID` is the receptionist's tally sheet**, and `sort by … desc` puts the busiest event type on top.
+> Hotel: **`summarize count() by EventID` is the receptionist's tally sheet**, and `sort by … desc` puts the busiest event type on top.
 
 ![Event IDs ranked by count](03-summarize-sort.png)
 
@@ -102,7 +100,7 @@ SecurityEvent
 | sort by Attempts desc
 ```
 
-🏨 **Counting wrong key cards per door**: which doors were tried the most?
+> Hotel: **Counting wrong key cards per door**: which doors were tried the most?
 
 ![Failed logons by account](04-accounts-targeted.png)
 
@@ -113,7 +111,7 @@ SecurityEvent
 | `SHIR-Hive\admin`, `SHIR-HIVE\Administrator`, `Tamarindo@tamacc\Administrator` | 289 / 231 / 373 | Admin accounts with a computer or domain prefix |
 | `\USER`, `\TEST`, `\SERVER`, `\SYMANTEC` | 313 / 301 / 265 / 60 | Generic default names from a wordlist |
 
-🏨 Someone tried the **Manager's office** door over 10,000 times, then rattled the doors marked "Test" and "Server". Guests who forgot their room number do not behave like that.
+> Hotel: Someone tried the **Manager's office** door over 10,000 times, then rattled the doors marked "Test" and "Server". Guests who forgot their room number do not behave like that.
 
 ## Exercise 7 – Do the attempts cluster in time?
 
@@ -123,19 +121,21 @@ SecurityEvent
 | summarize Attempts = count() by bin(TimeGenerated, 1h)
 ```
 
-🏨 **`bin(TimeGenerated, 1h)` sorts the entries into one-hour buckets.**
+> Hotel: **`bin(TimeGenerated, 1h)` sorts the entries into one-hour buckets.**
 
 ![Failed logons per hour](05-time-bin.png)
 
-Only **one row**: every event shares the same timestamp (also visible in Exercise 2), because the training data was loaded in one go. 🏨 An old logbook was photocopied into a new one at midnight, so every entry carries the photocopy date, not the night the doors were really tried.
+Only **one row**: every event shares the same timestamp (also visible in Exercise 2), because the training data was loaded in one go.
+
+> Hotel: an old logbook was photocopied into a new one at midnight, so every entry carries the photocopy date, not the night the doors were really tried.
 
 ---
 
-## 🧠 Skills practised
+## Skills practised
 
 `where` (filter) · `take` (sample) · `project` (pick columns) · `summarize count()` (tally) · `sort by` (order) · `bin()` (group by time). Plus two analyst habits: verify field names in your own environment, and treat a big number as a **lead, not proof**.
 
-## ➡️ Next step
+## Next step
 
 The key open question: **did any door actually open?**
 
